@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>大乐透综合工具（统计 · 拟合 · 随机选号）</title>
+<style>
+*{box-sizing:border-box;font-family:system-ui,-apple-system,sans-serif;margin:0;padding:0}
+body{padding:16px;max-width:680px;margin:0 auto;background:#f3f4f6}
+.card{background:#fff;border-radius:12px;padding:16px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+h3{margin-bottom:10px;color:#1f2937;font-size:17px}
+.info{color:#555;font-size:13px;margin-bottom:10px;line-height:1.6}
+textarea{width:100%;height:160px;padding:10px;font-size:15px;border:1px solid #d1d5db;border-radius:8px;resize:vertical}
+.slider-wrap{margin:10px 0}
+input[type="range"]{width:100%}
+button{width:100%;padding:12px;font-size:16px;margin:8px 0 0;border:none;border-radius:8px;background:#2563eb;color:#fff;cursor:pointer}
+button.sec{background:#6b7280}
+button.save{background:#16a34a}
+button.orange{background:#ea580c}
+.out-box{margin-top:12px;border:1px solid #d1d5db;border-radius:10px;overflow:hidden}
+.out-title{padding:8px 12px;font-weight:bold;font-size:14px;border-bottom:1px solid #d1d5db}
+.out-body{padding:12px;font-size:16px;white-space:pre-wrap;line-height:1.7;background:#f9fafb}
+.t-blue .out-title{background:#eef2ff;color:#1e3a8a}
+.t-orange .out-title{background:#fff7ed;color:#9a3412}
+.t-green .out-title{background:#ecfdf5;color:#065f46}
+.t-purple .out-title{background:#f5f3ff;color:#6d28d9}
+.orange-body{background:#fffbeb}
+.green-body{background:#f0fdf4}
+.counter{font-size:13px;color:#9a3412;text-align:center;margin-top:6px}
+.rec-item{padding:6px 0;border-bottom:1px dashed #bbf7d0;font-size:14px}
+.rec-item:last-child{border-bottom:none}
+.rec-empty{color:#6b7280;font-size:13px}
+.hot{color:#dc2626;font-weight:bold}
+.cold{color:#16a34a}
+.btn-row{display:flex;gap:10px;margin-top:8px}
+.btn-row button{margin:0;flex:1}
+.tabs{display:flex;gap:8px;margin-bottom:12px}
+.tabs button{margin:0;flex:1;padding:10px;font-size:14px}
+.tabs button.active{background:#1e3a8a}
+.page{display:none}
+.page.active{display:block}
+</style>
+</head>
+<body>
+
+<!-- ============ 顶部：统一数据录入 ============ -->
+<div class="card">
+  <h3>⌨️ 数据录入（同步写入历史统计与拟合数组）</h3>
+  <p class="info">输入一行 7 个数字（前区 5 个 + 后区 2 个），空格或逗号隔开。<br>
+  <strong>旧数据</strong>插入到两个统计数组的<strong>首行</strong>；<strong>新数据</strong>追加到两个统计数组的<strong>末行</strong>。</p>
+  <input type="text" id="topInp" placeholder="示例：10 11 25 30 32 09 10"
+    style="width:100%;padding:10px;font-size:15px;border:1px solid #d1d5db;border-radius:8px">
+  <div class="btn-row">
+    <button class="orange" onclick="addData('front')">作为旧数据 · 插入首行</button>
+    <button onclick="addData('back')">作为新数据 · 追加末行</button>
+  </div>
+</div>
+
+<!-- ============ 模块一：历史号码冷热统计 ============ -->
+<div class="card">
+  <h3>📊 一、历史号码冷热统计</h3>
+  <p class="info">每行一期大乐透，共 7 个数字（前区 5 个 + 后区 2 个），<strong>数字之间用空格或逗号隔开</strong>。示例：<br>
+  <code>10 11 25 30 32 09 10</code>　或　<code>26133,10,11,25,30,32,9,10</code></p>
+  <textarea id="statInp" placeholder="在此粘贴历史开奖号码，每行一期……"></textarea>
+  <button onclick="doStat()">开始统计冷热号</button>
+  <div class="out-box t-blue">
+    <div class="out-title">统计结果（前区 01-35 / 后区 01-12）</div>
+    <div class="out-body" id="statRes">等待统计…</div>
+  </div>
+</div>
+
+<!-- ============ 模块二：拟合预测 ============ -->
+<div class="card">
+  <h3>📈 二、拟合预测（每行 7 个因变量，自变量为行号）</h3>
+  <p class="info">每行一组 7 个数字，<strong>数字中间用空格符隔开</strong>；每一列独立拟合，预测下一行 7 个值。</p>
+  <textarea id="fitInp" placeholder="示例：
+12 3 22 5 18 7 9
+5 17 9 26 11 3 14
+7 11 30 4 15 22 6"></textarea>
+  <div class="slider-wrap">
+    <label>谐波阶数 K：<span id="kVal">10</span></label>
+    <input type="range" id="kSlider" min="1" max="100" value="10">
+    <p class="info">⚠️K 不能超过样本行数一半，超出自动截断；K 越大越贴近历史，也越容易过拟合。</p>
+  </div>
+  <button onclick="calcFit()">拟合计算，预测下一行</button>
+  <div class="out-box t-purple">
+    <div class="out-title">拟合预测结果</div>
+    <div class="out-body" id="fitRes">等待计算…</div>
+  </div>
+</div>
+
+<!-- ============ 模块三：随机选号 + 计数 ============ -->
+<div class="card">
+  <h3>🎲 三、随机选号（前区 1-35 选 5，后区 1-12 选 2）</h3>
+  <div class="out-box t-orange">
+    <div class="out-title">随机号码</div>
+    <div class="out-body orange-body" id="randRes" style="text-align:center;font-size:20px">点击下方按钮生成一组号码</div>
+  </div>
+  <div class="counter" id="counter">本次尚未生成（计数 0）</div>
+  <button class="sec" onclick="randCreate()">随机生成一组大乐透号码</button>
+  <button class="save" onclick="saveRecord()">保存当前号码及生成次数</button>
+</div>
+
+<!-- ============ 模块四：已保存记录 ============ -->
+<div class="card">
+  <h3>📁 四、已保存记录（号码 + 生成次数）</h3>
+  <div class="out-box t-green">
+    <div class="out-title">保存列表</div>
+    <div class="out-body green-body" id="recList"><span class="rec-empty">暂无保存记录</span></div>
+  </div>
+</div>
+
+<script>
+/* ==================== 滑块 K 阶数显示绑定 ==================== */
+const kSlider = document.getElementById('kSlider');
+const kVal = document.getElementById('kVal');
+function updateKLabel(){ kVal.innerText = kSlider.value; }
+kSlider.addEventListener('input', updateKLabel);
+kSlider.addEventListener('change', updateKLabel);
+updateKLabel();
+
+/* ==================== 顶部：统一录入，同步写入两个数组 ==================== */
+function addData(position){
+    const raw = document.getElementById('topInp').value.trim();
+    if(!raw){ alert("请先输入一行 7 个数字！"); return; }
+    let arr = raw.split(/[\s,，]+/).map(Number).filter(n=>!isNaN(n));
+    if(arr.length !== 7){ alert("❌必须输入恰好 7 个数字（前 5 后 2）！"); return; }
+    const line = arr.join(" ");
+    const boxes = [document.getElementById('statInp'), document.getElementById('fitInp')];
+    boxes.forEach(box=>{
+        let rows = box.value.trim()
+            ? box.value.split("\n").map(r=>r.trim()).filter(r=>r)
+            : [];
+        if(position === 'front') rows.unshift(line);  // 旧数据 → 首行
+        else rows.push(line);                          // 新数据 → 末行
+        box.value = rows.join("\n");
+    });
+    document.getElementById('topInp').value = "";
+}
+
+/* ==================== 模块一：冷热统计 ==================== */
+function doStat(){
+    const txt = document.getElementById("statInp").value.trim();
+    const dom = document.getElementById("statRes");
+    if(!txt){ dom.innerText="请先粘贴历史开奖数据！"; return; }
+    const lines = txt.split("\n");
+    let frontAll = [], backAll = [], sample = 0;
+    for(let line of lines){
+        line = line.trim();
+        if(!line) continue;
+        let arr = line.split(/[\s,，]+/).map(Number).filter(n=>!isNaN(n));
+        // 若含期号（第1个为非号码整数），去掉期号列
+        if(arr.length === 8) arr = arr.slice(1);
+        if(arr.length !== 7){ dom.innerText="❌错误：每行必须为 7 个数字（前5后2）"; return; }
+        frontAll.push(...arr.slice(0,5));
+        backAll.push(...arr.slice(5,7));
+        sample++;
+    }
+    if(sample === 0){ dom.innerText="未识别到有效数据！"; return; }
+
+    function count(list, max){
+        let obj = {};
+        for(let i=1;i<=max;i++) obj[i]=0;
+        list.forEach(v=>{ if(obj[v]!==undefined) obj[v]++; });
+        return obj;
+    }
+    const fc = count(frontAll,35), bc = count(backAll,12);
+    const avgF = frontAll.length/35, avgB = backAll.length/12;
+    let out = "======== 前区 01-35 ========\n";
+    for(let i=1;i<=35;i++){
+        let tag = fc[i]>avgF ? "【热】" : (fc[i] < avgF*0.7 ? "【冷】" : "");
+        out += `${String(i).padStart(2,'0')}: ${fc[i]}次 ${tag}\n`;
+    }
+    out += "\n======== 后区 01-12 ========\n";
+    for(let i=1;i<=12;i++){
+        let tag = bc[i]>avgB ? "【热】" : (bc[i] < avgB*0.7 ? "【冷】" : "");
+        out += `${String(i).padStart(2,'0')}: ${bc[i]}次 ${tag}\n`;
+    }
+    out += `\n📌统计样本：${sample} 期`;
+    dom.innerText = out;
+}
+
+/* ==================== 模块二：拟合预测 ==================== */
+function fourierPredict(yList, xPred, Kmax){
+    const N = yList.length, L = N;
+    const K = Math.min(Kmax, Math.floor(N/2));
+    let a0 = 0;
+    for(let i=0;i<N;i++) a0 += yList[i];
+    a0 = a0 / N;
+    let A=[], B=[];
+    for(let k=1;k<=K;k++){
+        let ak=0, bk=0;
+        for(let i=0;i<N;i++){
+            const x=i+1, ang=2*Math.PI*k*x/L;
+            ak += yList[i]*Math.cos(ang);
+            bk += yList[i]*Math.sin(ang);
+        }
+        A.push(2*ak/N); B.push(2*bk/N);
+    }
+    let val=a0;
+    for(let k=1;k<=K;k++){
+        const ang=2*Math.PI*k*xPred/L;
+        val += A[k-1]*Math.cos(ang)+B[k-1]*Math.sin(ang);
+    }
+    return {val, K};
+}
+
+function calcFit(){
+    const txt = document.getElementById("fitInp").value.trim();
+    const dom = document.getElementById("fitRes");
+    const Kuser = parseInt(document.getElementById("kSlider").value);
+    if(!txt){ dom.innerText="请输入多行数据！每行 7 个数字，数字中间用空格符隔开"; return; }
+    const lines = txt.split("\n");
+    let data=[];
+    for(let line of lines){
+        line=line.trim();
+        if(!line) continue;
+        const arr=line.split(/\s+/).map(Number);
+        if(arr.length!==7){ dom.innerText="❌错误：每行必须恰好 7 个数字"; return; }
+        data.push(arr);
+    }
+    const N=data.length;
+    if(N<2){ dom.innerText="❌至少输入 2 行数据才能拟合"; return; }
+    let col=[[],[],[],[],[],[],[]];
+    for(let r=0;r<N;r++) for(let c=0;c<7;c++) col[c].push(data[r][c]);
+    const nextX=N+1, pred=[]; let realK=0;
+    for(let c=0;c<7;c++){
+        const ret=fourierPredict(col[c], nextX, Kuser);
+        pred.push(ret.val.toFixed(4)); realK=ret.K;
+    }
+    dom.innerText=`✅样本行数：${N}
+用户设定谐波K：${Kuser}
+实际使用谐波K：${realK}
+下一个自变量 x = ${nextX}
+预测下一行 7 个值：
+${pred.join(" , ")}`;
+}
+
+/* ==================== 模块三、四：随机选号 + 计数 + 保存 ==================== */
+let genCount=0, currentFront=null, currentBack=null;
+const STORE_KEY="dlt_saved_records";
+
+function loadRecords(){
+    try{ return JSON.parse(localStorage.getItem(STORE_KEY)) || []; }
+    catch(e){ return []; }
+}
+function renderRecords(){
+    const list=loadRecords(), box=document.getElementById("recList");
+    if(list.length===0){ box.innerHTML='<span class="rec-empty">暂无保存记录</span>'; return; }
+    box.innerHTML=list.map((r,idx)=>
+        `<div class="rec-item">${idx+1}. 第 ${r.count} 次生成 ｜ 前区：${r.front} ｜ 后区：${r.back} ｜ ${r.time}</div>`
+    ).join("");
+}
+
+function randCreate(){
+    let front=[];
+    while(front.length<5){
+        const n=Math.floor(Math.random()*35)+1;
+        if(!front.includes(n)) front.push(n);
+    }
+    front.sort((a,b)=>a-b);
+    let back=[];
+    while(back.length<2){
+        const n=Math.floor(Math.random()*12)+1;
+        if(!back.includes(n)) back.push(n);
+    }
+    back.sort((a,b)=>a-b);
+    currentFront=front.map(x=>x.toString().padStart(2,'0')).join(' ');
+    currentBack=back.map(x=>x.toString().padStart(2,'0')).join(' ');
+    genCount++;
+    document.getElementById("randRes").innerText=`前区：${currentFront}\n后区：${currentBack}`;
+    document.getElementById("counter").innerText=`本次为第 ${genCount} 次生成（计数 ${genCount}）`;
+}
+
+function saveRecord(){
+    if(currentFront===null){ alert("请先生成一组号码，再进行保存！"); return; }
+    const records=loadRecords();
+    records.push({ front:currentFront, back:currentBack, count:genCount, time:new Date().toLocaleString() });
+    localStorage.setItem(STORE_KEY, JSON.stringify(records));
+    renderRecords();
+    // 保存后重新计数
+    genCount=0; currentFront=null; currentBack=null;
+    document.getElementById("randRes").innerText="已保存，可继续生成下一组";
+    document.getElementById("counter").innerText="计数已重置（0），下次生成从第 1 次开始";
+}
+
+renderRecords();
+</script>
+</body>
+</html>
